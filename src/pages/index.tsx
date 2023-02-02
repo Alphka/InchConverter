@@ -1,4 +1,4 @@
-import { memo, useState, type PropsWithChildren } from "react"
+import { useState, type PropsWithChildren } from "react"
 import { Poppins } from "@next/font/google"
 import IsNumber from "helpers/IsNumber"
 import Script from "next/script"
@@ -22,7 +22,7 @@ const inchToMm = 25.4
 
 function FindDivisor(a: number, b: number){
 	while(b !== 0){
-		let t = b
+		const t = b
 		b = a % b
 		a = t
 	}
@@ -31,30 +31,29 @@ function FindDivisor(a: number, b: number){
 }
 
 function MixedFraction(a: number, b: number){
+	if(b === 0) throw new SyntaxError("The fraction denominator cannot be zero.")
+	if(b === 1) return a
+
 	const quotient = Math.trunc(a / b)
 	const remainder = a % b
 
 	if(remainder === 0) return quotient
 
 	const divisor = FindDivisor(remainder, b)
+	const fraction = `${new Decimal(remainder / divisor).toString()}/${new Decimal(b / divisor).toString()}` as const
 
-	return `${divisor} ${remainder / divisor}/${b / divisor}`
+	return quotient ? `${new Decimal(quotient).toString()} ${fraction}` as const : fraction
 }
 
 function GetFractionInch(mm: string){
 	const native = Number(mm) / inchToMm
 	const decimal = new Decimal(mm).dividedBy(inchToMm)
 
-	if(native % 1 === 0) return native
+	if(native % 1 === 0) return [native] as const
 
-	if(decimal.equals(native)){
-		const integer = Math.trunc(native)
-		const fraction = new Decimal(native).sub(integer).toFraction().join("/")
+	const [a, b] = decimal.times(128).round().dividedBy(128).toFraction()
 
-		return integer ? `${integer} ${fraction}` : fraction
-	}
-
-	return decimal.times(128).round().dividedBy(128).toFraction().join("/")
+	return [a.toNumber(), b.toNumber()] as const
 }
 
 function GetDecimalInch(mm: string){
@@ -62,25 +61,27 @@ function GetDecimalInch(mm: string){
 }
 
 function GetInches(mm: string, unit: Units){
-
 	const fraction = GetFractionInch(mm)
+	const mixed = fraction[1] && fraction[0] > fraction[1] && MixedFraction(fraction[0], fraction[1] ?? 1)
 	const decimal = GetDecimalInch(mm)
-	const mixed = MixedFraction.apply(undefined, typeof fraction === "string" ? fraction.split("/").map(Number) as [number, number] : [fraction, 1])
+
+	const preciseFraction = fraction[1] && fraction.map(number => new Decimal(number).toString()).join("/")
+	const preciseMixed = typeof mixed === "number" ? new Decimal(mixed).toString() : mixed
 
 	return (
 		<table>
 			<thead>
 				<tr>
-					<th>Fraction</th>
 					<th>Decimal</th>
-					<th>Mixed fraction</th>
+					{preciseFraction && <th>Fraction</th>}
+					{preciseMixed && <th>Mixed fraction</th>}
 				</tr>
 			</thead>
 			<tbody>
 				<tr>
-					<td>{fraction} {unit}</td>
 					<td>{decimal} {unit}</td>
-					<td>{mixed} {unit}</td>
+					{preciseFraction && <td>{preciseFraction} {unit}</td>}
+					{preciseMixed && <td>{preciseMixed} {unit}</td>}
 				</tr>
 			</tbody>
 		</table>
@@ -92,12 +93,12 @@ function GetMillimeters(inches: string, unit: Units){
 }
 
 function Section({ children, unit, callback }: SectionProps){
-	let setResult: (result: string) => void
+	let setResult: (result: string | undefined) => void
 
 	function Result(){
 		const [result, setter] = useState<string>()
 		setResult ??= setter
-		return result && <div className="result">{IsNumber(result) && callback(result, unit)}</div> || null
+		return result ? <div className="result">{callback(result, unit)}</div> : null
 	}
 
 	return (
@@ -106,7 +107,12 @@ function Section({ children, unit, callback }: SectionProps){
 				<h3>{children}</h3>
 			</header>
 			<div>
-				<input type="number" onChange={event => setResult(event.target.value)} />
+				<input type="number" onChange={event => {
+					const { value } = event.target
+
+					if(value.trim() === "") return setResult(undefined)
+					if(IsNumber(value)) return setResult(value)
+				}} />
 				<Result />
 			</div>
 		</section>
@@ -126,7 +132,7 @@ export default function Index(){
 				<link rel="icon" href="/favicon.ico" />
 			</Head>
 
-			<main className={`${poppins.className}`}>
+			<main className={poppins.className}>
 				<article>
 					<Section callback={GetInches} unit="in">Convert millimeters into inches:</Section>
 					<Section callback={GetMillimeters} unit="mm">Convert inches into millimeters:</Section>
