@@ -1,0 +1,72 @@
+*{
+	outline: none;
+	border: none;
+	padding: 0;
+	margin: 0;
+	box-sizing: border-box;
+	-webkit-tap-highlight-color: transparent;
+}
+
+:root{
+	--background-color: black;
+	--color: #ccc;
+}
+
+body{
+	background-color: var(--background-color);
+	color: var(--color);
+	padding: 16pt 8pt;
+}
+
+main{
+	input{
+		background-color: #242424;
+		min-height: 20px;
+		width: clamp(200px, 400px, 100vw - 16pt * 2);
+		padding: 4pt 2pt 4pt 8pt;
+		border-radius: 2pt;
+		margin: 8pt 0;
+
+		&:focus::placeholder{
+			visibility: hidden;
+		}
+
+		&::placeholder{
+			color: inherit;
+		}
+	}
+
+	section{
+		&:not(:first-of-type){
+			margin-top: 8pt;
+		}
+
+		.result{
+			font-size: 16px;
+
+			table{
+				table-layout: fixed;
+				border-collapse: collapse;
+				width: clamp(300px, 100%, 1280px);
+
+				thead th{
+					font-weight: 500;
+				}
+
+				tbody td{
+					text-align: center;
+					font-weight: 400;
+					overflow: clip;
+					white-space: nowrap;
+					text-overflow: ellipsis;
+					padding: 0 4pt;
+				}
+			}
+
+			> p{
+				font-size: 20px;
+				font-weight: 400;
+			}
+		}
+	}
+}
